@@ -4,6 +4,7 @@ sys.path.append('{}Dropbox/program/mypackage_py'.format(prefix))
 import sqlite3, sqlCommand, psycopg2
 import craw.crawler_fp1 as crawler_fp1
 from functools import partial
+import pandas as pd
 
 connLite = sqlite3.connect('{}Documents/db/tse.sqlite3'.format(prefix))
 conn = psycopg2.connect("host=localhost dbname=tse user=postgres password=d03724008")
@@ -14,23 +15,24 @@ client = MongoClient('localhost', 27017)
 mongoDb = client['tse']
 
 
-def saveToSqliteF(tablename, df):
-    sqlCommand.insertData(tablename, df, connLite)
+def saveToSqliteF(table: str, df: pd.DataFrame) -> None:
+    sqlCommand.i_lite(connLite, table, df)
+    # sqlCommand.insertData(table, df, connLite)
 
 
-def saveToPostgreF(tablename, df):
-    sqlCommand.insertDataPostgre(tablename, df, conn)
+def saveToPostgreF(table: str, df: pd.DataFrame) -> None:
+    sqlCommand.insertDataPostgre(table, df, conn)
 
 
-def saveToMongoF(tablename, df):
+def saveToMongoF(table: str, df: pd.DataFrame) -> None:
     d = df.to_dict(orient='records')
-    collection = mongoDb[tablename]
+    collection = mongoDb[table]
     collection.insert_many(d)
 
 
-def saveToSqliteMongoF(tablename, df):
-    saveToSqliteF(tablename, df)
-    saveToMongoF(tablename, df)
+def saveToSqliteMongoF(table: str, df: pd.DataFrame) -> None:
+    saveToSqliteF(table, df)
+    saveToMongoF(table, df)
 
 
 last_datetime = partial(crawler_fp1.last_datetime, connLite)

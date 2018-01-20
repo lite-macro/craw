@@ -3,13 +3,14 @@ import functools
 import datetime as dt
 import pandas as pd
 import psycopg2
-from toolz import curry
 from typing import Callable
+import cytoolz
 import json, sys
 sys.path.append('/home/david/Dropbox/program/mypackage_py')
 import sqlCommand as sqlCommand
-
+import sqlite3
 import logging
+import rx
 
 # 產生新的logger
 logger = logging.Logger('test')
@@ -24,35 +25,57 @@ console.setFormatter(formatter)
 
 logger.addHandler(console)
 
+class Error(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+
+class NoData(Error):
+    def __init__(self, expression = None):
+        self.expression = expression
+
+
 def requests_get(url: str, playload={}) -> str:
-    source_code = requests.get(url, params=playload)
-    source_code.encoding = 'utf-8'
-    plain_text = source_code.text
+    response = requests.get(url, params=playload)
+    print(response.url)
+    response.raise_for_status()
+    response.encoding = 'utf-8'
+    plain_text = response.text
     return plain_text
+
 
 def requests_post(url: str, playload={}) -> str:
-    source_code = requests.post(url, params=playload)
-    source_code.encoding = 'utf-8'
-    plain_text = source_code.text
+    response = requests.post(url, params=playload)
+    print(response.url)
+    response.raise_for_status()
+    response.encoding = 'utf-8'
+    plain_text = response.text
     return plain_text
+
 
 def session_get(session, url: str, playload={}) -> str:
-    source_code = session.get(url, params=playload)
-    source_code.encoding = 'utf-8'
-    plain_text = source_code.text
+    response = session.get(url, params=playload)
+    print(response.url)
+    response.raise_for_status()
+    response.encoding = 'utf-8'
+    plain_text = response.text
     return plain_text
 
+
 def session_post(session, url: str, playload={}) -> str:
-    source_code = session.post(url, params=playload)
-    source_code.encoding = 'utf-8'
-    plain_text = source_code.text
+    response = session.post(url, params=playload)
+    print(response.url)
+    response.raise_for_status()
+    response.encoding = 'utf-8'
+    plain_text = response.text
     return plain_text
+
 
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36'}
 payload = {'headers': headers}
 
-plainTextF_get = curry(requests_get, playload=payload)
-plainTextF_post = curry(requests_post, playload=payload)
+plainTextF_get = cytoolz.curry(requests_get, playload=payload)
+plainTextF_post = cytoolz.curry(requests_post, playload=payload)
 # plainTextF_get = functools.partial(requestsF_get, playload=payload)
 # plainTextF_post = functools.partial(requestsF_post, playload=payload)
 
@@ -61,7 +84,7 @@ def get_plain_text(url):
     return plainTextF_get(url)
 
 
-@curry
+@cytoolz.curry
 def input_date(lastdate: dt.datetime, t: int) -> str:
     dateTime = lastdate + dt.timedelta(days=t)
     month, day = dateTime.month, dateTime.day
@@ -74,7 +97,7 @@ def input_date(lastdate: dt.datetime, t: int) -> str:
     return input_date
 
 
-@curry
+@cytoolz.curry
 def input_dates(lastdate: dt.datetime, now: dt.datetime) -> list:
     delta = now - lastdate
     date = input_date(lastdate)
@@ -97,12 +120,46 @@ def craw_save(crawler: Callable, saver: Callable[[pd.DataFrame], None], t) -> No
     saver(df)
 
 
-def looper(crawAndSave: Callable, dates: list) -> Callable:
-    for date in dates:
-        try:
-            yield date, crawAndSave(date)
-        except Exception as e:
-            logger.warning('t:%s, e:%s', date, e)
-            pass
+# def looper(crawAndSave: Callable, dates: list) -> Callable:
+#     for date in dates:
+#         try:
+#             yield date, crawAndSave(date)
+#         except NoData as e:
+#             print(e)
+#             pass
 
+
+# def looper(crawAndSave: Callable, dates: list) -> Callable:
+#     for date in dates:
+#         try:
+#             yield date, crawAndSave(date)
+#         except Exception as e:
+#             logger.warning('t:%s, e:%s', date, e)
+#             pass
+
+@cytoolz.curry
+def handle_err(crawAndSave: Callable, date: str) -> None:
+    try:
+        crawAndSave(date)
+    except NoData as e:
+        print(date, e)
+
+
+class CrawlerObserver(rx.Observer):
+
+    def on_next(self, value):
+        pass
+
+    def on_completed(self):
+        print("Done!")
+
+    def on_error(self, error):
+        logger.error(error)
+        raise type(error)(error)
+
+
+def loop(crawAndSave: Callable, dates: list):
+    f = handle_err(crawAndSave)
+    source = rx.Observable.from_(dates).map(f)
+    source.subscribe(CrawlerObserver())
 
