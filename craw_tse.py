@@ -1,12 +1,12 @@
-import sys
-prefix = '/home/david/'
-sys.path.append('{}Dropbox/program/mypackage_py'.format(prefix))
+import sys, os
+sys.path.append(os.getenv('MY_PYTHON_PKG'))
+import syspath
 import sqlite3, sqlCommand, psycopg2
-import craw.crawler_fp1 as crawler_fp1
+import craw.crawler as crawler
 from functools import partial
 import pandas as pd
 
-connLite = sqlite3.connect('{}Documents/db/tse.sqlite3'.format(prefix))
+connLite = sqlite3.connect('/home/david/Documents/db/tse.sqlite3')
 conn = psycopg2.connect("host=localhost dbname=tse user=postgres password=d03724008")
 
 from pymongo import MongoClient
@@ -35,7 +35,7 @@ def saveToSqliteMongoF(table: str, df: pd.DataFrame) -> None:
     saveToMongoF(table, df)
 
 
-last_datetime = partial(crawler_fp1.last_datetime, connLite)
+last_datetime = partial(crawler.last_datetime, connLite)
 
 # df = sqlCommand.selectAll('個股日本益比、殖利率及股價淨值比', connLite)
 # saveToMongoF('個股日本益比、殖利率及股價淨值比', df)
