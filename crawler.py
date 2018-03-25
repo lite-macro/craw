@@ -1,16 +1,11 @@
 import requests
-import functools
 import datetime as dt
 import pandas as pd
-import psycopg2
 from typing import Callable
 import cytoolz
-import json
 import sys, os
 sys.path.append(os.getenv('MY_PYTHON_PKG'))
-import syspath
 import sqlCommand as sqlc
-import sqlite3
 import logging
 import rx
 
@@ -102,6 +97,7 @@ def input_dates(lastdate: dt.datetime, now: dt.datetime) -> list:
     return list(map(date, range(delta.days + 1)))
 
 
+@cytoolz.curry
 def last_datetime(conn, table: str) -> dt.datetime:
     df_distinct_date = sqlc.selectDistinct(['年月日'], table, conn)
     list_last_date = [int(i) for i in df_distinct_date.sort_values(['年月日']).iloc[-1][0].split('-')]
@@ -113,11 +109,12 @@ def time_delta(lastdate: dt.datetime) -> dt.timedelta:
     return dt.datetime.now() - lastdate
 
 
-def craw_save(crawler: Callable, saver: Callable[[pd.DataFrame], None], t) -> None:
-    df = crawler(t)
-    saver(df)
+@cytoolz.curry
+def craw_save(saver: Callable[[pd.DataFrame], None], crawler: Callable, t) -> None:
+    saver(crawler(t))
 
 
+@cytoolz.curry
 def looper(crawAndSave: Callable, dates: list) -> Callable:
      for date in dates:
         try:
