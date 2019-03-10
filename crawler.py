@@ -1,13 +1,14 @@
 import requests
 import datetime as dt
 import pandas as pd
-from typing import Callable
+from typing import Callable, Iterable, List
 import cytoolz
 import sys, os
 sys.path.append(os.getenv('MY_PYTHON_PKG'))
 import sqlCommand as sqlc
 import logging
 import rx
+import time
 
 # 產生新的logger
 logger = logging.Logger('test')
@@ -90,6 +91,22 @@ def input_date(lastdate: dt.datetime, t: int) -> str:
     return input_date
 
 
+def __dt_to_str(date: dt.datetime) -> str:
+    month, day = date.month, date.day
+    if len(str(month)) == 1:
+        month = '0' + str(month)
+    if len(str(day)) == 1:
+        day = '0' + str(day)
+    input_date = str(date.year) + str(month) + str(day)
+    return input_date
+
+
+def dt_to_str(dates: Iterable[dt.datetime]) -> List[str]:
+    days = sorted([__dt_to_str(date) for date in dates])
+    print(days)
+    return days
+
+
 @cytoolz.curry
 def input_dates(lastdate: dt.datetime, now: dt.datetime) -> list:
     delta = now - lastdate
@@ -117,6 +134,7 @@ def craw_save(saver: Callable[[pd.DataFrame], None], crawler: Callable, t) -> No
 @cytoolz.curry
 def looper(crawAndSave: Callable, dates: list) -> Callable:
      for date in dates:
+        time.sleep(3)
         try:
              yield date, crawAndSave(date)
         except NoData as e:
