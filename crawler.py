@@ -1,14 +1,14 @@
+import time
+import rx
+import logging
+import sqlCommand as sqlc
 import requests
 import datetime as dt
 import pandas as pd
 from typing import Callable, Iterable, List
 import cytoolz
-import sys, os
-sys.path.append(os.getenv('MY_PYTHON_PKG'))
-import sqlCommand as sqlc
-import logging
-import rx
-import time
+import os
+
 
 # 產生新的logger
 logger = logging.Logger('test')
@@ -17,11 +17,13 @@ logger = logging.Logger('test')
 console = logging.StreamHandler()
 console.setLevel(logging.DEBUG)
 # 設定輸出格式
-formatter = logging.Formatter('%(asctime)s: %(levelname)-s %(module)s %(lineno)d  %(funcName)s %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s: %(levelname)-s %(module)s %(lineno)d  %(funcName)s %(message)s')
 # handler 設定輸出格式
 console.setFormatter(formatter)
 
 logger.addHandler(console)
+
 
 class Error(Exception):
     """Base class for exceptions in this module."""
@@ -29,13 +31,14 @@ class Error(Exception):
 
 
 class NoData(Error):
-    def __init__(self, expression = None):
+    def __init__(self, expression=None):
         self.expression = expression
 
 
 @cytoolz.curry
 def requests_get(url: str, playload: dict) -> requests.Response:
-    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
     response = requests.get(url, headers=headers, params=playload)
     print(response.url)
     response.raise_for_status()
@@ -45,7 +48,8 @@ def requests_get(url: str, playload: dict) -> requests.Response:
 
 @cytoolz.curry
 def requests_post(url: str, playload: dict) -> requests.Response:
-    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
     response = requests.post(url, headers=headers, params=playload)
     print(response.url)
     response.raise_for_status()
@@ -55,7 +59,8 @@ def requests_post(url: str, playload: dict) -> requests.Response:
 
 @cytoolz.curry
 def session_get(session, url: str, playload: dict) -> requests.Response:
-    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
     response = session.get(url, headers=headers, params=playload)
     print(response.url)
     response.raise_for_status()
@@ -65,7 +70,8 @@ def session_get(session, url: str, playload: dict) -> requests.Response:
 
 @cytoolz.curry
 def session_post(session, url: str, playload: dict) -> requests.Response:
-    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36'}
     response = session.post(url, headers=headers, params=playload)
     print(response.url)
     response.raise_for_status()
@@ -117,8 +123,10 @@ def input_dates(lastdate: dt.datetime, now: dt.datetime) -> list:
 @cytoolz.curry
 def last_datetime(conn, table: str) -> dt.datetime:
     df_distinct_date = sqlc.selectDistinct(['年月日'], table, conn)
-    list_last_date = [int(i) for i in df_distinct_date.sort_values(['年月日']).iloc[-1][0].split('-')]
-    lastdate = dt.datetime(list_last_date[0], list_last_date[1], list_last_date[2])
+    list_last_date = [int(i) for i in df_distinct_date.sort_values(
+        ['年月日']).iloc[-1][0].split('-')]
+    lastdate = dt.datetime(
+        list_last_date[0], list_last_date[1], list_last_date[2])
     return lastdate
 
 
@@ -133,10 +141,10 @@ def craw_save(saver: Callable[[pd.DataFrame], None], crawler: Callable, t) -> No
 
 @cytoolz.curry
 def looper(crawAndSave: Callable, dates: list) -> Callable:
-     for date in dates:
-        time.sleep(3)
+    for date in dates:
+        time.sleep(5)
         try:
-             yield date, crawAndSave(date)
+            yield date, crawAndSave(date)
         except NoData as e:
             print(date, e)
 
@@ -162,7 +170,7 @@ class CrawlerObserver(rx.Observer):
         raise type(error)(error)
 
 
-#def loop(crawAndSave: Callable, dates: list):
+# def loop(crawAndSave: Callable, dates: list):
 #    f = handle_err(crawAndSave)
 #    source = rx.Observable.from_(dates).map(f)
 #    source.subscribe(CrawlerObserver())
