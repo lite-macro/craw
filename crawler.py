@@ -157,7 +157,7 @@ def handle_err(crawAndSave: Callable, date: str) -> None:
         print(date, e)
 
 
-class CrawlerObserver(rx.Observer):
+class CrawlerObserver():
 
     def on_next(self, value):
         pass
